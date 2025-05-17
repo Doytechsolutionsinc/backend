@@ -1,11 +1,10 @@
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
 app = FastAPI()
 
-# Allow frontend to access it
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,14 +13,15 @@ app.add_middleware(
 )
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+if not OPENROUTER_API_KEY:
+    raise RuntimeError("Missing OPENROUTER_API_KEY environment variable")
 
 @app.post("/chat")
 async def chat(request: Request):
     data = await request.json()
     message = data.get("message", "")
-
-    # Debug print to check if env variable is loaded correctly
-    print("OPENROUTER_API_KEY:", OPENROUTER_API_KEY)
+    if not message:
+        raise HTTPException(status_code=400, detail="No message provided")
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -32,10 +32,11 @@ async def chat(request: Request):
             },
             json={
                 "model": "openchat/openchat-3.5-0106",
-                "messages": [
-                    {"role": "user", "content": message}
-                ]
-            }
+                "messages": [{"role": "user", "content": message}]
+            },
         )
-    data = response.json()
-    return {"reply": data["choices"][0]["message"]["content"]}
+        if response.status_code != 200:
+            return {"error": f"API call failed: {response.text}"}
+
+        data = response.json()
+        return {"reply": data["choices"][0]["message"]["content"]}
