@@ -1,46 +1,42 @@
-# api/chat.py
-import json
 import os
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
+app = FastAPI()
 
-async def handler(request: Request):
-    try:
-        body = await request.json()
-        message = body.get("message", "")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-        api_key = os.environ.get("OPENROUTER_API_KEY")
+@app.get("/")
+async def root():
+    return {"message": "MetroTex Backend is Live!"}
 
-        if not api_key:
-            return JSONResponse(status_code=500, content={"error": "API key not found"})
+@app.post("/chat")
+async def chat(request: Request):
+    data = await request.json()
+    message = data.get("message", "")
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "openchat/openchat-3.5-0106",
-                    "messages": [
-                        {"role": "user", "content": message}
-                    ]
-                }
-            )
+    headers = {
+        "Authorization": f"Bearer {os.environ.get('OPENROUTER_API_KEY')}",
+        "Content-Type": "application/json"
+    }
 
-        if response.status_code != 200:
-            return JSONResponse(status_code=response.status_code, content={"error": response.text})
+    payload = {
+        "model": "openchat/openchat-3.5-0106",
+        "messages": [{"role": "user", "content": message}]
+    }
 
-        data = response.json()
-        reply = data["choices"][0]["message"]["content"]
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
 
-        return JSONResponse(content={"reply": reply})
-
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
-# Required by Vercel to expose the function
-handler = handler
+    result = response.json()
+    return {"reply": result["choices"][0]["message"]["content"]}
