@@ -31,7 +31,7 @@ async def chat(request: Request):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "openchat/openchat-3.5-0106",
+                "model": "openchat/openchat-3.5-turbo",
                 "messages": [{"role": "user", "content": message}]
             },
         )
