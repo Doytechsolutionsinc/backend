@@ -8,7 +8,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://metrotexonline.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -38,16 +38,15 @@ currency_aliases = {
 }
 
 async def convert_currency(amount, from_code, to_code):
-    # Sample API: CurrencyAPI.com, change URL as per your provider
     url = f"https://api.apilayer.com/exchangerates_data/convert?to={to_code}&from={from_code}&amount={amount}"
     headers = {
         "apikey": CURRENCY_API_KEY
     }
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(url, headers=headers)
         if response.status_code != 200:
             raise HTTPException(status_code=500, detail="Currency conversion failed")
-        data = response.json()
+        data = await response.json()
         return data.get("result")
 
 @app.post("/chat")
@@ -74,7 +73,7 @@ async def chat(request: Request):
         except Exception:
             return {"reply": "Currency conversion failed. Please try again later."}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -87,7 +86,7 @@ async def chat(request: Request):
             },
         )
         if response.status_code != 200:
-            return {"error": f"API call failed: {response.text}"}
+            return {"reply": f"API call failed: {response.text}"}
 
-        data = response.json()
+        data = await response.json()
         return {"reply": data["choices"][0]["message"]["content"]}
