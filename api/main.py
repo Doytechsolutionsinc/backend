@@ -31,7 +31,7 @@ async def chat(request: Request):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "DeepSeek R1",
+                "model": "deepseek/deepseek-r1",
                 "messages": [{"role": "user", "content": message}]
             },
         )
