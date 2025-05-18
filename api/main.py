@@ -31,7 +31,7 @@ async def chat(request: Request):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "deepseek/deepseek-r1",
+                "model": "openai/chatgpt-4o",
                 "messages": [{"role": "user", "content": message}]
             },
         )
